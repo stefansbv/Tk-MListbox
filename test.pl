@@ -1,85 +1,95 @@
 #!/usr/bin/perl -w
 
-# MListbox demonstration application.
+## THIS IS ONE OF THE TEST SCRIPTS THAT HANS PROVIDED WITH MLISTBOX
+## It IS STILL UNDERGOING EDITS BY ME - RCS
 
-# Author: Hans J. Helgesen, December 1999.
-#
-# Before March 2000:
-#
-# Please send comments, suggestions and error reports to 
-# hans_helgesen@hotmail.com.
-#
-# From March 2000: hans.helgesen@novit.no
-#
+## MListbox demonstration application. This is a simple directory browser
+## Original Author: Hans J. Helgesen, December 1999.
+## Modified by: Rob Seegel, to work in Win32 as well
+## Use and abuse this code. I did - RCS
+
+use File::stat;
 use Tk;
 use Tk::MListbox;
 
+## Create main perl/tk window.
+my $mw = MainWindow->new;
 
-my $intro = <<EOT;
-This is a very simple file manager application that demonstrates the use of MListbox $Tk::MListbox::VERSION.
+## Create the MListbox widget. 
+## Specify alternative comparison routine for integers and date.
+## frame, but since the "Show All" button references $ml, we have to create
+## it now. 
 
-* To resize any of the columns, drag the vertical bar to the RIGHT of the column.
-* To move any of the columns, drag the column header left or right.
-* To sort the table, click on any of the column headers. A new click will reverse the sort order.
-* To scroll fast (scan) in any direction, "drag" with middle mouse button (you have to make the window narrower first to see horizontal scanning).
-* To hide/show any of the columns, use the right mouse button on the column headings (or the "Show All" button).
-* To see another directory, double click on a directory below.
-EOT
-    
-# Create main perl/tk window.
-my $mw = new MainWindow;
+my %red = qw(-bg red -fg white);
+my %green = qw(-bg green -fg white);
+my %white = qw(-fg black);
 
-# Show some "help" text.
-$mw->Label(-text=>$intro,-justify=>'left')->pack(-anchor=>'w');
-
-# Create the MListbox widget. 
-# Specify alternative comparison routine for integers and date.
-# (The MListbox is actually pack'ed below the button
-# frame, but since the "Show All" button references $ml, we have to create
-# it now. 
 my $ml = $mw->Scrolled('MListbox',
-		       -scrollbars => 'oe',
-		       -selectmode => 'extended',
-		       -bd=>2,-relief=>'sunken',
-		       -columns=>[[-text=>'Mode',-textwidth=>10],
-				  [-text=>'NLink', -textwidth=>3,
-				   -comparecmd => sub {$_[0] <=> $_[1]}],
-				  [-text=>'Uid'],
-				  [-text=>'Gid'],
-				  [-text=>'Size',
-				   -comparecmd => sub {$_[0] <=> $_[1]}],
-				  [-text=>'Mtime',
-				   -comparecmd => \&compareDate],
-				  [-text=>'Name']]);
+    -scrollbars => 'osoe',
+    -background => 'white', 
+    -foreground => 'blue',
+    -textwidth => 10,
+    -highlightthickness => 2,
+    -width => 0,
+    -selectmode => 'browse',
+    -bd=>2,
+    -relief=>'sunken',
+    -columns=>[
+        [qw/-text Mode -textwidth 10/, %red],
+	[qw/-text NLink -textwidth 5/, %green, 
+            -comparecmd => sub {$_[0] <=> $_[1]}],
+	[qw/-text UID/, %white],
+	[qw/-text GID/, %green],
+	[qw/-text Size/,%red, 
+            -comparecmd => sub {$_[0] <=> $_[1]}],
+	[qw/-text Mtime/, %green, 
+	    -comparecmd => \&compareDate],
+        [qw/-text Name/, %white]
+ ]);
 
 
-# Put the exit button and the "Show All" button in a separate frame.
-my $f = $mw->Frame(-bd=>2,-relief=>'groove')
-    ->pack(-anchor=>'w', -expand=>0,-fill=>'x');
+## Put the exit button and the "Show All" button in 
+## a separate frame.
+my $f = $mw->Frame(
+    -bd=>2,
+    -relief=>'groove'
+)->pack(qw/-anchor w -expand 0 -fill x/);
 
-$f->Button(-text=>'Exit',-command=>sub{exit})
-    ->pack(-side=>'right',-anchor=>'e');
+$f->Button(
+    -text=>'Exit',
+    -command => sub{exit}
+)->pack(qw/-side right -anchor e/);
 
-$f->Button(-text=>'Show All', 
-	   -command=>sub {
-	       foreach ($ml->columnGet(0,'end')) {
-		   $ml->columnShow($_);
-	       }
-	   })->pack(-side=>'left',-anchor=>'w');
+$f->Button(
+    -text=>'Show All', 
+    -command=>sub {
+        foreach ($ml->columnGet(0,'end')) {
+	    $ml->columnShow($_);
+        }
+})->pack(qw/-side left -anchor w/);
 
 # Put the MListbox widget on the bottom of the main window.
-$ml->pack (-expand=>1, -fill=>'both', -anchor=>'w');
+$ml->pack(-expand=>1, -fill=>'both', -anchor=>'w');
 
 # Double clicking any of the data rows calls openFileOrDir()
 # (But only directories are handled for now...)
 $ml->bindRows("<Double-Button-1>", \&openFileOrDir);
 
 # Right-clicking the column heading creates the hide/show popup menu.
-$ml->bindColumns("<Button-3>", \&columnPopup);
+$ml->bindColumns("<Button-3>", [\&columnPopup]);
+
+
+$ml->bindRows('<ButtonRelease-1>',  
+    sub {
+        my ($w, $infoHR) = @_;
+        print "You selected row: " . $infoHR->{-row} .
+             " in column: " . $infoHR->{-column} . "\n";
+    }
+);
+
 
 # Start by showing the current directory.
 directory (".");
-
 
 MainLoop;
 
@@ -100,8 +110,8 @@ sub directory
     opendir (DIR, ".") or die "Cannot open '.': $!\n";
     
     foreach my $name (readdir(DIR)) {	
-	my ($dev, $ino, $mode, $nlink, $uid, $gid, $rdev, $size,
-	    $atime, $mtime, $ctime, $blksize, $blocks) = stat($name);
+	my $st = stat($name);
+        my $mode = $st->mode;
 	
 	my $type = do {
 	    if (-l $name) {
@@ -121,13 +131,11 @@ sub directory
 		' ';
 	    }};
 	    
-	$gid = getgrgid ($gid);
-	$uid = getpwuid ($uid);
-
-	$mtime = localtime($mtime);
-	$mode = $type . convMode ($mode);
-
-	$ml->insert('end', [$mode,$nlink,$uid,$gid,$size,$mtime,$name]);
+	my $mtime = localtime($st->mtime);
+	$mode = $type . convMode ($st->mode);
+        $ml->insert('end', 
+            [$mode, $st->nlink, $st->uid, $st->gid, $st->size, $mtime,$name]
+        );
     }
 }
 
@@ -149,10 +157,12 @@ sub openFileOrDir
 # Create a popupmenu with hide/show options.
 sub columnPopup
 {
-    my ($w, $index) = @_;
+    my ($w, $infoHR) = @_;
     
     # Create popup menu.
     my $menu = $w->Menu(-tearoff=>0);
+    my $index = $infoHR->{'-column'};  
+
 
     # First item is "Hide (this column)".
     #

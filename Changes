@@ -39,4 +39,30 @@ Fixed the -selectmode and the -height configoptions.
 The widget now keeps the same rows selected after a sort.
 
 
+1.10 
+---- 
+
+- fixed deprecated use of defined
+- fixed color option problems (-background/-foreground/-selectbackground, etc)
+- Adding some keyboard bindings 
+- deprecated bind() -- it was aliasing bindRows()
+- made changes to bindColumns/bindRows/bindSeparators 
+  the second argument is no longer a column index. It is
+  now a hash reference containing {-subwidget => $sw, -columns => index}.
+  for bindRows there is also -row => index.
+- fixed columnPack and columnPackInfo methods, which weren't working
+  correctly. They now are fine.
+- played with the width option. Now, if it is set to 0, widget should
+  be created large enough to hold all columns. -textwidth applies to
+  each column. So a setting of 0 will make each Column wide enough to
+  display their contents. 
+- all options set to MListbox act as default settings for each column,
+  these settings can be overridden by setting the options within the
+  -columns option, or by using columnConfigure or columnInsert. However,
+  once widget is created. If the higher level MListbox options are 
+  reconfigured they will override all columns. (This seemed logical).
+
+Rob
+
+
 

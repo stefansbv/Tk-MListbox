@@ -41,7 +41,14 @@
         );
     }
    
-    sub selectionSet {
+    sub activate {
+        my ($w)=@_;
+        $w->Callback(-updatecommand=>$w->can('SUPER::activate'),@_);
+    }
+    sub see {
+        my ($w)=@_;
+        $w->Callback(-updatecommand=>$w->can('SUPER::see'),@_);
+    }    sub selectionSet {
         my ($w) = @_;
         $w->Callback(-updatecommand=>$w->can('SUPER::selectionSet'),@_);
     }
@@ -53,14 +60,7 @@
         my ($w)=@_;
         $w->Callback(-updatecommand=>$w->can('SUPER::selectionAnchor'),@_);
     }
-    sub activate {
-        my ($w)=@_;
-        $w->Callback(-updatecommand=>$w->can('SUPER::activate'),@_);
-    }
-    sub see {
-        my ($w)=@_;
-        $w->Callback(-updatecommand=>$w->can('SUPER::see'),@_);
-    }
+
     sub yview {
         my ($w)=@_;
         $w->Callback(-updatecommand=>$w->can('SUPER::yview'),@_);     
@@ -124,7 +124,7 @@
        
         ## MLColumn Components
         ## $sep - separator - Frame
-        ## $hdr - heading    - HButton
+        ## $hdr - header    - HButton
         ## $f   - frame     - Frame	
         ## $lb  - listbox   - CListbox
 
@@ -146,8 +146,7 @@
             -takefocus=>0,
 	    -padx=>0,
 	    -width=>1,
-	    -borderwidth=>2,
-            -highlightthickness=>0
+	    -borderwidth=>2
         )->pack(qw/-side top -anchor n -fill x/);
 	$w->Advertise("heading" => $hdr);
 	
@@ -279,8 +278,8 @@ sub Tk::Widget::Scrolled {
     %args = @args;
     $cw->ConfigSpecs(
         '-scrollbars' => [qw/METHOD   scrollbars Scrollbars se/],
-        '-background' => [$w, qw/background Background/, undef],
-        '-foreground' => [$w, qw/foreground Foreground/, undef],
+        '-background' => [qw/CHILDREN background Background/, undef],
+        '-foreground' => [qw/CHILDREN foreground Foreground/, undef],
     );
     $cw->AddScrollbars($w);
     $cw->Default("\L$kind" => $w);
@@ -376,7 +375,7 @@ sub Populate {
 	-sortable          => [qw/METHOD sortable Sortable 1/],
         -takefocus         => [qw/PASSIVE takeFocus Focus 1/],
         -textwidth         => [qw/METHOD textWidth Width 10/],
-        -width             => [qw/METHOD width Width/, undef],
+        -width             => [qw/METHOD width Width 0/],
       	-xscrollcommand    => [$pane],
 	-yscrollcommand    => ['CALLBACK'],  
     );
@@ -444,7 +443,6 @@ sub textwidth         { shift->_configureColumns('-textwidth', @_) }
 
 sub width {
     my ($w, $v) = @_;
-
     return $w->{Configure}{'-width'} unless defined $v;
     if ($v == 0) {
         $w->afterIdle(['_setWidth', $w]);
@@ -702,7 +700,7 @@ sub _setWidth {
     my ($w) = shift;
     my $width = 0;
     foreach my $c (@{$w->{'_columns'}}) {
-        my $lw = $c->Subwidget('heading')->reqwidth;
+        my $lw = $c->Subwidget('listbox')->reqwidth;
         my $sw = $c->Subwidget('separator')->reqwidth;
         $width += ($lw + $sw);
     }
@@ -992,10 +990,12 @@ sub getRow {
 sub index { shift->_firstVisible->index(@_)}
 
 sub insert {
+    print "insert called\n";
     my ($w, $index, @data) = @_;
     my ($rownum, $colnum);
     
     my $rowcnt = $#data;
+    print "Rows: $rowcnt\n";
     
     # Insert data into one column at a time, calling $listbox->insert
     # ONCE for each column. (The first version of this widget call insert
@@ -1017,7 +1017,12 @@ sub insert {
 		push @coldata, '';
 	    }
 	}
+        print "$index\n";
+        print foreach (@coldata) { print "$_ "; }
+        print "\n";
+ 
 	$c->insert($index,@coldata);
+      
 	
 	if ($c->ismapped) {
 	    # Restore saved width.
