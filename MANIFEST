@@ -1,6 +1,8 @@
-MListbox.pm
+Changes
 MANIFEST
+MListbox.pm
+Makefile
 Makefile.PL
 README
-filemgr.pl
 sql.pl
+test.pl

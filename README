@@ -16,7 +16,7 @@ Tk::MListbox is designed for displaying reports like the result of a database
 query or the contents of a directory.
 
 Two example programs are provided: sql.pl lets the user enter a query and 
-displays the result in a MListbox. Requires DBI.pm. filemgr.pl is a very 
+displays the result in a MListbox. Requires DBI.pm. test.pl is a very 
 simple file manager for unix.
 
 

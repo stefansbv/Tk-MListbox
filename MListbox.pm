@@ -12,7 +12,7 @@
 #
 #
 
-# This module contains three classes: CListbox, MLColumn and MListbox. 
+# This module contains four classes: CListbox, MLColumn, HButton and MListbox. 
 # Only MListbox is intended for external use.
 #
 # For documentation on MListbox methods and configuration, see comments
@@ -22,45 +22,48 @@
 ##############################################################################
 # CListbox is similar to an ordinary listbox, but with the following 
 # differences:
-# - Calls an -updatecmd whenever something happens to it.
-# - Horizontal scanning is disabled, calls -xscancmd to let parent widget
+# - Calls an -updatecommand whenever something happens to it.
+# - Horizontal scanning is disabled, calls -xscancommand to let parent widget
 #   handle this.
 {
-package Tk::CListbox;
-require Tk::Listbox;
-	
-@ISA = qw/Tk::Derived Tk::Listbox/;
+    package Tk::CListbox;
+    require Tk::Listbox;
+    
+    use vars qw(@ISA);
+    
+    @ISA = qw/Tk::Derived Tk::Listbox/;
+    
+  Tk::Widget->Construct('CListbox');
+    
+    sub Populate 
+    { 
+	shift->ConfigSpecs(-updatecommand => ['CALLBACK'],
+			   -xscancommand => ['CALLBACK']);
+    }
 
- Tk::Widget->Construct('CListbox');
-
-sub Populate 
-{ 
-    shift->ConfigSpecs(-updatecmd => ['CALLBACK'],
-		       -xscancmd => ['CALLBACK']);
-}
 sub selectionSet {
     my ($w)=@_;
-    $w->Callback(-updatecmd=>$w->can('SUPER::selectionSet'),@_);
+    $w->Callback(-updatecommand=>$w->can('SUPER::selectionSet'),@_);
 }
 sub selectionClear {
     my ($w)=@_;
-    $w->Callback(-updatecmd=>$w->can('SUPER::selectionClear'),@_);
+    $w->Callback(-updatecommand=>$w->can('SUPER::selectionClear'),@_);
 }
 sub selectionAnchor {
     my ($w)=@_;
-    $w->Callback(-updatecmd=>$w->can('SUPER::selectionAnchor'),@_);
+    $w->Callback(-updatecommand=>$w->can('SUPER::selectionAnchor'),@_);
 }
 sub activate {
     my ($w)=@_;
-    $w->Callback(-updatecmd=>$w->can('SUPER::activate'),@_);
+    $w->Callback(-updatecommand=>$w->can('SUPER::activate'),@_);
 }
 sub see {
     my ($w)=@_;
-    $w->Callback(-updatecmd=>$w->can('SUPER::see'),@_);
+    $w->Callback(-updatecommand=>$w->can('SUPER::see'),@_);
 }
 sub yview {
     my ($w)=@_;
-    $w->Callback(-updatecmd=>$w->can('SUPER::yview'),@_);     
+    $w->Callback(-updatecommand=>$w->can('SUPER::yview'),@_);     
 }
 sub scan {
     my ($w,$type,$x,$y) = @_;
@@ -68,12 +71,46 @@ sub scan {
     if ($type eq 'mark') {
 	$w->{'ml_scanmark_x'} = $x;
     }
-    $w->Callback(-updatecmd=>$w->can('SUPER::scan'),
+    $w->Callback(-updatecommand=>$w->can('SUPER::scan'),
 		 $w,$type,$w->{'ml_scanmark_x'},$y);
 
-    $w->Callback(-xscancmd=>$type,$x);
+    $w->Callback(-xscancommand=>$type,$x);
 }
 }
+
+##############################################################################
+# HButton is like an ordinary Button, but with an addition option:
+#      -pixelwidth
+#
+# The new configure method makes sure the pixelwidth is always retained.
+#
+{
+    package Tk::HButton;
+    require Tk::Button;
+    use vars qw(@ISA);
+	
+    @ISA = qw/Tk::Derived Tk::Button/;
+    
+  Tk::Widget->Construct('HButton');
+    
+    sub Populate
+    {
+	shift->ConfigSpecs(-pixelwidth => ['PASSIVE']);
+    }
+
+sub configure
+{
+    my ($w) = shift;
+    my (@ret) = $w->SUPER::configure(@_);
+    unless (@ret) {
+	if (defined(my $pixels = $w->cget('-pixelwidth'))) {
+	    $w->GeometryRequest($pixels,$w->height);
+	}
+    }
+    return @ret;
+}
+}
+
 ###############################################################################
 # MLColumn implements a single column in the MListbox. A column consists of a 
 # heading (a Button), the listbox (CListbox), and the vertical borderline 
@@ -82,62 +119,68 @@ sub scan {
 # The MLColumn implements the resizing of the column.
 #
 {
-package Tk::MLColumn;
-
-use base qw(Tk::Frame);
-Construct Tk::Widget 'MLColumn';
-
-sub Populate {
-    my ($w, $args) = @_;
-    $w->SUPER::Populate($args);
+    package Tk::MLColumn;
     
-    # The column is a frame containing a heading (Button), and a listbox
-    # below. The right edge of the frame is a Canvas containing a black line.
-    my $c = $w->Canvas(-height => 1,
-		       -takefocus => 0)
-	->pack(-side => 'right',-fill=>'y',-anchor => 'w');
+    use base qw(Tk::Frame);
+    Construct Tk::Widget 'MLColumn';
     
-    
-    my $f = $w->Frame
-	->pack(-side=>'left', -anchor=>'e',-fill=>'y',-expand=>1);
-    
-    my $b = $f->Button(-takefocus=>0,
-		       -padx=>0,
-		       -width=>1,
-		       -borderwidth=>1)
-	->pack(-side=>'top', -anchor=>'n', -fill=>'x');
-    
-    my $l = $f->CListbox(-selectborderwidth=>0,
-			 -highlightthickness=>0,
-			 -relief=>'flat',
-			 -bd=>0,
-			 -exportselection=>0,
-			 -takefocus=>0)
-	->pack(-side=>'top', -anchor=>'n', -fill=>'both', -expand=>1);
-    
-    
-    $c->Tk::bind ("<B1-Motion>", [ $w => 'adjustMotion' ]);
-
-    $w->Advertise("listbox" => $l);
-    $w->Advertise("separator" => $c);
-    $w->Advertise("heading" => $b);
-    $w->Advertise("frame" => $f);
-
-    $w->Delegates (DEFAULT => $l);
-
-    $w->ConfigSpecs
-	(-comparecmd => ['CALLBACK', undef,undef,sub{$_[0] cmp $_[1]}],
-	 -updatecmd  => [$l],
-	 -background => ['METHOD'],
-	 -font       => ['DESCENDANTS'],
-	 -text       => [$b],
-	 -separatorwidth => [{-width => $c}, undef,undef,1],
-	 -separatorcolor => [{-background => $c}, undef,undef,'black'],
-	 -resizeable => ['METHOD',undef,undef,1],
-	 -sortable   => ['PASSIVE'],
-	 -textwidth      => ['METHOD'],
-	 DEFAULT     => [$l] );
-}
+    sub Populate {
+	my ($w, $args) = @_;
+	$w->SUPER::Populate($args);
+	
+	# The column is a frame containing a heading (HButton), and a listbox
+	# below. The right edge of the frame is a Canvas containing
+	#a black line.
+	
+	my $c = $w->Canvas(-height => 1,
+			   -takefocus => 0)
+	    ->pack(-side => 'right',-fill=>'y',-anchor => 'w');
+	
+	
+	my $f = $w->Frame
+	    ->pack(-side=>'left', -anchor=>'e',-fill=>'y',-expand=>1);
+	
+	my $b = $f->HButton(-takefocus=>0,
+			    -padx=>0,
+			    -width=>1,
+			    -borderwidth=>1)
+	    ->pack(-side=>'top', -anchor=>'n', -fill=>'x');
+	
+	my $l = $f->CListbox(-selectborderwidth=>0,
+			     -highlightthickness=>0,
+			     -relief=>'flat',
+			     -bd=>0,
+			     -exportselection=>0,
+			     -takefocus=>0)
+	    ->pack(-side=>'top', -anchor=>'n', -fill=>'both', -expand=>1);
+	
+	
+	$c->Tk::bind("<B1-Motion>", [$w=>'adjustMotion']);
+	$c->Tk::bind("<ButtonRelease-1>", 
+		     [$w=>'Callback','-configurecommand']);
+	$w->Advertise("listbox" => $l);
+	$w->Advertise("separator" => $c);
+	$w->Advertise("heading" => $b);
+	$w->Advertise("frame" => $f);
+	
+	$w->Delegates (DEFAULT => $l);
+	
+	$w->ConfigSpecs
+	    (-comparecommand => ['CALLBACK', undef,undef,sub{$_[0] cmp $_[1]}],
+	     -comparecmd => '-comparecommand',
+	     -configurecommand => ['CALLBACK'],
+	     -updatecommand  => [$l],
+	     -background => ['METHOD'],
+	     -font       => ['DESCENDANTS'],
+	     -text       => [$b],
+	     -separatorwidth => [{-width => $c}, undef,undef,1],
+	     -separatorcolor => [{-background => $c}, undef,undef,'black'],
+	     -resizeable => ['METHOD',undef,undef,1],
+	     -sortable   => ['PASSIVE'],
+	     -textwidth  => '-width',
+	     -width      => [$l, $h],
+	     DEFAULT     => [$l] );
+    }
 
 #----------------------------------------------------------------------------
 # MLColumn configuration methods.
@@ -154,18 +197,11 @@ sub resizeable
 {
     my ($w,$value) = @_;
     return $w->{'lb_resizeable'} unless defined $value;
+
     $w->Subwidget("separator")->configure 
 	(-cursor => ($value ? 'sb_h_double_arrow' : 'xterm'));
-    $w->{'lb_resizeable'} = $value;
-}
-sub textwidth
-{
-    my ($w, $value) = @_;
-    return $w->Subwidget("listbox")->cget(-width) unless defined $value;
     
-    foreach (qw/listbox heading/) {
-	$w->Subwidget($_)->configure(-width=>$value);
-    }
+    $w->{'lb_resizeable'} = $value;
 }
 
 #----------------------------------------------------------------------------
@@ -174,17 +210,21 @@ sub textwidth
 sub compare
 {
     my ($w,$a,$b) = @_;
-    $w->Callback(-comparecmd => $a, $b);
+    $w->Callback(-comparecommand => $a, $b);
 }
 
 sub setWidth
 {
     my ($w, $pixels) = @_;
     $pixels -= $w->Subwidget("separator")->width;
-    foreach (qw/heading listbox/) {
-	$w->Subwidget($_)->GeometryRequest($pixels,$w->Subwidget($_)->height);
-    }
+    
+    return unless $pixels >= 0;
+    
+    $w->Subwidget("listbox")
+	->GeometryRequest($pixels,$w->Subwidget("listbox")->height);
+    $w->Subwidget("heading")->configure(-pixelwidth=>$pixels);
 }
+
 
 #----------------------------------------------------------------------------
 # MLColumn internal methods.
@@ -198,32 +238,14 @@ sub adjustMotion
 }
 
 }
+############################################################################
 
-##############################################################################
-#
-# MListbox. This is basically a collection of columns, each column consists
-# of a heading (Button), a separator (Canvas) and the data itself(Listbox).
-# The columns are accessed through the columnXXXX methods, other exported
-# methods access the data in the columns.
-#
-# The exported methods (not the columnXXXX methods) are very similar to
-# the standard Listbox' methods.
-#
-# All columns in the MListbox are indexed, starting from 0. When a column
-# is created, you might give it an index, or insert it at the end. The only
-# way to change the column indexes are by calling columnInsert or columnDelete.
-# 
-# NOTE: The column indexes does not neccessarily reflect the order the columns
-# are displayed on the screen. If you call columnShow or columnHide, or the
-# user moves the columns around, the columns' indexes are still the same.
-# If you want to know the display order, call columnPackInfo.
-#
 package Tk::MListbox;
 
+use strict;
 use vars qw($VERSION);
 
-# Change history:
-$VERSION = '1.06'; 
+$VERSION = '1.08';
 
 use Tk;
 use Tk::Pane;
@@ -262,7 +284,8 @@ sub Populate {
 		    -relief => ['SELF', undef, undef, 'flat'],
 		    -xscrollcommand => [$pane],
 		    -yscrollcommand => ['CALLBACK'],
-		    DEFAULT => ['DESCENDANTS']);
+		    -configurecommand => ['CALLBACK'],
+		    DEFAULT => ['CHILDREN']);
 }
 
 sub xview { shift->Subwidget("pane")->xview(@_) }
@@ -308,9 +331,10 @@ sub columnInsert
     my $c = $w->Subwidget("pane")->MLColumn 
 	(%opts,			  
 	 -yscrollcommand => [ $w => 'yscrollCallback'],
-	 -xscancmd => [ $w => 'xscan' ],
-	 -updatecmd => [ $w => 'selectionUpdate']);
- 
+	 -configurecommand => [$w => 'Callback','-configurecommand',$w],
+	 -xscancommand => [ $w => 'xscan' ],
+	 -updatecommand => [ $w => 'selectionUpdate']);
+    
     # Fill the new column with empty values, making sure all columns have
     # the same number of rows.
     unless (scalar(@{$w->{'ml_columns'}}) == 0) {
@@ -327,6 +351,18 @@ sub columnInsert
     # Update the selection to also include the new column.
     map {$w->selectionSet($_,$_)} $w->curselection;
 
+    # Copy all bindings that are created by calls to 
+    # bindRows, bindColumns and/or bindSeparators.
+    #
+    foreach my $subwidget (qw/listbox heading separator/) {
+	foreach (keys %{$w->{'ml_bindings'}->{$subwidget}}) {
+	    $c->Subwidget($subwidget)->Tk::bind
+		($_, [$w => 'bindCallback',
+		      $w->{'ml_bindings'}->{$subwidget}->{$_},
+		      $index]);
+	}
+    }
+    
     if (Tk::Exists($w->{'ml_columns'}->[$index+1])) {
 	$w->columnShow($index, -before=>$index+1);
     } else {
@@ -424,8 +460,14 @@ sub columnShow
 
 sub columnGet
 {
-    my ($w, $index) = @_;
-    return $w->{'ml_columns'}->[$w->columnIndex($index)];
+    my ($w, $from, $to) = @_;
+    if (defined($to)) {
+	$from= $w->columnIndex($from);
+	$to = $w->columnIndex($to);
+	return @{$w->{'ml_columns'}}[$from..$to];
+    } else {
+	return $w->{'ml_columns'}->[$w->columnIndex($from)];
+    }
 }
 
 
@@ -539,20 +581,25 @@ sub get
 sub sort 
 {
     my ($w, $descending, @indexes) = @_;
-
-    $w->Busy;
     
+    # Hack to avoid problem with older Tk versions which do not support
+    # the -recurse=>1 option.
+    $w->Busy;   # This works always (but not very good...)
+  Tk::catch {$w->Busy(-recurse=>1)};# This works on newer Tk versions,
+                                    # harmless on old versions.
+      
+      
     @indexes = (0..$#{$w->{'ml_columns'}}) unless defined @indexes;
 
     # Convert all indexes to integers.
     map {$_=$w->columnIndex($_)} @indexes;
     
     # This works on Solaris, but not on Linux???
-    # Store the -comparecmd for each row in a local array. In the sort,
+    # Store the -comparecommand for each row in a local array. In the sort,
     # the store command is called directly in stead of via the MLColumn
     # subwidget. This saves a lot of callbacks and function calls.
     #
-   # my @cmp_subs = map {$_->cget(-comparecmd)} @{$w->{'ml_columns'}};
+   # my @cmp_subs = map {$_->cget(-comparecommand)} @{$w->{'ml_columns'}};
     
     # If sort order is not defined
     unless (defined $descending) {
@@ -593,7 +640,7 @@ sub sort
 
     $w->{'ml_sortcol'} = $indexes[0];
     $w->{'ml_sort_descending'} = $descending;
-    $w->Unbusy;
+    $w->Unbusy; #(-recurse=>1);
 }
 
 
@@ -674,8 +721,10 @@ sub dragOrSort
     $tl->overrideredirect(1);
     $tl->geometry(sprintf("%dx%d+%d+%d",
 			  $h->width, $h->height, $h->rootx, $y_pos));
-    my @opt = map {$_->[0] => $h->cget($_->[0])} $h->configure;
-    my $b=$tl->Button(@opt)->pack(-expand=>1,-fill=>'both');
+
+    my $b=$tl->HButton
+	(map{defined($_->[4]) ? ($_->[0]=>$_->[4]) : ()} $h->configure)
+	    ->pack(-expand=>1,-fill=>'both');
     
     # Move the toplevel with the mouse (as long as Button-1 is down).
     $h->bind("<Motion>", sub {
@@ -715,6 +764,8 @@ sub dragOrSort
 		    } else {
 			$w->columnShow($c,'-after'=>$_);
 		    }
+		    $w->update;
+		    $w->Callback(-configurecommand => $w);
 		}
 	    }
 	}
@@ -722,13 +773,80 @@ sub dragOrSort
     
 }
 
-sub bind
+# The following methods take care of external bindings. It makes little sense
+# to call $mlistbox->bind(...) without specifying a subwidget (header, listbox,
+# separator). In stead of the ordinary bind, the following methods should
+# be used:
+#
+#     bindRows($sequence,$callback) 
+#     bindColumns($sequence,$callback)
+#     bindSeparators($sequence,$callback)
+#
+# bindRows() adds the specified binding to all listboxes in the widget. 
+# bindColumns() adds the binding to all column headers in the widget.
+# bindSeparators() adds the binding to all separators in the widget.
+#
+# These methods store the binding information, and if you create a new
+# column by calling $mlistbox->columnInsert, all bindings created by
+# these methods are automatically copied to the new column.
+#
+# The callback is called with the MListbox widget as first argument, and
+# the index of the column where the event occured as the second argument.
+#
+# NOTE that these methods does not support all of Tk's callback formats.
+# The following are supported:
+#
+#     \&subname
+#     sub { code }
+#     [ \&subname, arguments...]
+#     [ sub { code }, arguments...]
+#
+#
+sub bindSubwidgets
 {
-    my ($w, @args) = @_;
+    my ($w,$subwidget,$sequence,$callback) = @_;
+    my $column_index = 0;
+    
+    unless (defined $sequence) {
+	return (keys %{$w->{'ml_bindings'}->{$subwidget}});
+    }
+    unless (defined $callback) {
+	$callback = $w->{'ml_bindings'}->{$subwidget}->{$sequence};
+	$callback = '' unless defined $callback;
+	return $callback;
+    }
+    if ($callback eq '') {
+	foreach (@{$w->{'ml_columns'}}) {
+	    $_->Subwidget($subwidget)->Tk::bind($sequence,'');
+	}
+	delete $w->{'ml_bindings'}->{$subwidget}->{$sequence};
+	return '';
+    }
     foreach (@{$w->{'ml_columns'}}) {
-	$_->bind(@args);
+	$_->Subwidget($subwidget)
+	    ->Tk::bind($sequence,
+		       [$w => 'bindCallback',$callback, $column_index++]);
+    }
+    $w->{'ml_bindings'}->{$subwidget}->{$sequence} = $callback;
+    return '';
+}
+
+sub bindCallback
+{
+    my ($w,$cb, $ci) = @_;
+    if (ref $cb eq 'ARRAY') {
+	my ($code,@args) = @$cb;
+	return $w->$code($ci,@args);
+    } else {
+	return $w->$cb($ci);
     }
 }
+
+sub bind { shift->bindRows(@_) }
+sub bindRows {  shift->bindSubwidgets('listbox',@_) }
+sub bindColumns {  shift->bindSubwidgets('heading',@_) }
+sub bindSeparators {  shift->bindSubwidgets('separator',@_) }
+
 
 # Many of the methods in this package are very similar: They call
 # the same method for the first (visible) column widget.
@@ -755,17 +873,17 @@ sub yview { shift->firstVisible->yview(@_)}
 
 1;
 
-
 __END__
 
 
-=head1 NAME
+=head1 NAME 
 
 Tk::MListbox - Multicolumn Listbox.
 
 =head1 SYNOPSIS
 
-$ml = $parent->MListbox (<options>);
+  use Tk::MListbox;
+  $ml = $parent->MListbox (<options>);
 
 =head1 DESCRIPTION
 
@@ -787,6 +905,14 @@ stead of scalar values MListbox operates on lists of data. In addition
 to methods for accessing the data in the MListbox, the widget offer 
 methods for manipulation of the individual columns.
 
+
+=head1 AUTHOR
+
+Hans Jorgen Helgesen, hans_helgesen@hotmail.com (from March 2000: hans.helgesen@novit.no)
+
+=head1 SEE ALSO
+
+L<Tk::Listbox>
 
 =head1 STANDARD OPTIONS
 
@@ -811,6 +937,17 @@ Tk::MListbox requires Tk::Pane.
 
 Defines the columns in the widget. Each element in the list 
 describes a column. See the B<COLUMNS> section below.
+
+=item -configurecommand => I<callback>
+
+The -configurecommand callback will be called whenever the layout of the
+widget has changed due to user interaction. That is, the user changes the
+width of a column by dragging the separator, or moves a column by dragging
+the column header. 
+
+This option is useful if the application wants to store the widget layout 
+for later retrieval. The widget layout can be obtained by the callback
+by calling the method columnPackInfo().
 
 =item -moveable => I<boolean>
 
@@ -910,7 +1047,28 @@ of columns minus one), 'end' for the last column, or a reference
 to the MLColumn widget (obtained by calling MListbox->columnGet() 
 or by storing the return value from MListbox->columnInsert()).
 
-=head1 COLUMN METHODS
+=head1 WIDGET METHODS
+
+=over 4
+
+=item $ml->bindColumns(I<sequence>,I<callback>)
+
+Adds the binding to all column headers in the widget. See the section
+BINDING EVENTS TO MLISTBOX below.
+
+=item $ml->bindRows(I<sequence>,I<callback>)
+
+Adds the binding to all listboxes in the widget. See the section
+BINDING EVENTS TO MLISTBOX below.
+
+=item $ml->bindSeparators(I<sequence>,I<callback>)
+
+Adds the binding to all separators in the widget. See the section
+BINDING EVENTS TO MLISTBOX below.
+
+=back
+
+=head2 COLUMN METHODS
 
 (Methods for accessing and manipulating individual columns
 in the MListbox widget)
@@ -926,7 +1084,7 @@ The following column options are supported:
 
 =item
 
--comparecmd => I<callback>
+-comparecommand => I<callback>
 
 Specifies a callback to use when sorting the MListbox with this
 column as key. The callback will be called with two scalar arguments,
@@ -935,7 +1093,7 @@ return an integer less than, equal to, or greater than 0, depending
 on how the tow arguments are ordered. If for example the column
 should be sorted by numerical value:
 
-    -comparecmd => sub { $_[0] <=> $_[1]}
+    -comparecommand => sub { $_[0] <=> $_[1]}
 
 The default is to sort the columns alphabetically.
 
@@ -987,9 +1145,11 @@ All previous column indices greater than I<last> (or I<first> if
 I<last> is omitted) are decremented by the number of columns 
 deleted.
 
-=item $ml->columnGet(I<index>)
+=item $ml->columnGet(I<first>,I<last>)
 
-Returns the MLColumn widget specified by I<index>.
+If I<last> is not specified, returns the MLColumn widget specified by I<first>.
+If both I<first> and I<last> are specified, returns an array containing all
+columns from I<first> to I<last>.
 
 =item $ml->columnHide(I<first>,I<last>)
 
@@ -1071,7 +1231,7 @@ by I<index>.
 
 =back
 
-=head1 ROW METHODS
+=head2 ROW METHODS
 
 (Methods for accessing and manipulating rows of data)
 
@@ -1164,7 +1324,8 @@ The column separator line. This is a Canvas.
 
 =item heading
 
-The column heading. This is a Button.
+The column heading. This is a "HButton" (a Button with an additional
+-pixelwidth option).
 
 =item frame
 
@@ -1179,7 +1340,75 @@ heading of column 4:
     $ml->columnGet(4)->Subwidget("heading")
         ->configure(-background=>'blue');
 
+=head1 BINDING EVENTS TO MLISTBOX
+
+Calling $ml->bind(...) probably makes little sense, since the call does not
+specify whether the binding should apply to the listbox, the header button 
+or the separator line between each column.
+
+In stead of the ordinary bind, the following methods should be used:
+
+=over 4
+
+=item $ml->bind(I<sequence>,I<callback>)
+
+Synonym for $ml->bindRows(I<sequence>,I<callback>).
+
+=item $ml->bindRows(I<sequence>,I<callback>)
+
+Synonym for $ml->bindSubwidgets('listbox',I<sequence>,I<callback>)
+
+=item $ml->bindColumns(I<sequence>,I<callback>)
+
+Synonym for $ml->bindSubwidgets('heading',I<sequence>,I<callback>)
+
+=item $ml->bindSeparators(I<sequence>,I<callback>)
+
+Synonym for $ml->bindSubwidgets('separator',I<sequence>,I<callback>)
+
+=item $ml->bindSubwidgets(I<subwidget>,I<sequence>,I<callback>)
+
+Adds the binding specified by I<sequence> and I<callback> to all subwidgets
+of the given type (should be 'listbox', 'heading' or 'separator'). 
+
+The binding is stored in the widget, and if you create a new column 
+by calling $ml->columnInsert(), all bindings created by $ml->bindSubwidgets()
+are automatically copied to the new column.
+
+The callback is called with the MListbox widget as first argument, and
+the index of the column where the event occured as the second argument.
+
+NOTE that $ml->bindSubwidgets() does not support all of Tk's callback formats.
+The following are supported:
+
+     \&subname
+     sub { code }
+     [ \&subname, arguments...]
+     [ sub { code }, arguments...]
+
+If I<sequence> is undefined, then the return value is a list whose elements 
+are all the sequences for which there exist bindings for I<subwidget>.
+
+If I<sequence> is specified without I<callback>, then the callback currently 
+bound to sequence is returned, or an empty string is returned if there is no
+binding for sequence.
+
+If I<sequence> is specified, and I<callback> is an empty string, then the
+current binding for sequence is destroyed, leaving sequence unbound. 
+An empty string is returned.
+
+An empty string is returned in all other cases.
+
+=back
+
 =cut
+
+
+
+
+
+
+
 
 
 

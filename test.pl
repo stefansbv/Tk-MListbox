@@ -16,39 +16,27 @@ use Tk::MListbox;
 
 
 my $intro = <<EOT;
-This is a very simple file manager application that demonstrates the use of MListbox.
+This is a very simple file manager application that demonstrates the use of MListbox $Tk::MListbox::VERSION.
 
 * To resize any of the columns, drag the vertical bar to the RIGHT of the column.
 * To move any of the columns, drag the column header left or right.
 * To sort the table, click on any of the column headers. A new click will reverse the sort order.
-* To hide/show any of the columns, check/uncheck the options below.
+* To scroll fast (scan) in any direction, "drag" with middle mouse button (you have to make the window narrower first to see horizontal scanning).
+* To hide/show any of the columns, use the right mouse button on the column headings (or the "Show All" button).
 * To see another directory, double click on a directory below.
 EOT
     
-my @displayed;
-
+# Create main perl/tk window.
 my $mw = new MainWindow;
 
 # Show some "help" text.
 $mw->Label(-text=>$intro,-justify=>'left')->pack(-anchor=>'w');
 
-# Put the exit button and all column checkbuttons in a frame.
-my $f = $mw->Frame(-bd=>2,-relief=>'groove')
-    ->pack(-anchor=>'w', -expand=>0,-fill=>'x');
-$f->Button(-text=>'Exit',-command=>sub{exit})
-    ->pack(-side=>'right',-anchor=>'e');
-$i=0;
-foreach (qw/Mode Nlink Uid Gid Size Mtime Name/) {
-    $displayed[$i]=1;
-    $f->Checkbutton(-text=>"$_   ",
-		    -variable=>\$displayed[$i],
-		    -command=>[\&hideOrShow, $i])->pack(-side=>'left');
-    $i++;
-}
-
-# Create the MListbox widget.
+# Create the MListbox widget. 
 # Specify alternative comparison routine for integers and date.
-#
+# (The MListbox is actually pack'ed below the button
+# frame, but since the "Show All" button references $ml, we have to create
+# it now. 
 my $ml = $mw->Scrolled('MListbox',
 		       -scrollbars => 'oe',
 		       -bd=>2,-relief=>'sunken',
@@ -61,13 +49,32 @@ my $ml = $mw->Scrolled('MListbox',
 				   -comparecmd => sub {$_[0] <=> $_[1]}],
 				  [-text=>'Mtime',
 				   -comparecmd => \&compareDate],
-				  [-text=>'Name']])
-    ->pack (-expand=>1, -fill=>'both', -anchor=>'w');
+				  [-text=>'Name']]);
 
-# bind does not work as it should do, the callback will get a
-# column widget as it first argument, not the MListbox widget.....
-#
-$ml->bind("<Double-Button-1>", \&doubleClick);
+
+# Put the exit button and the "Show All" button in a separate frame.
+my $f = $mw->Frame(-bd=>2,-relief=>'groove')
+    ->pack(-anchor=>'w', -expand=>0,-fill=>'x');
+
+$f->Button(-text=>'Exit',-command=>sub{exit})
+    ->pack(-side=>'right',-anchor=>'e');
+
+$f->Button(-text=>'Show All', 
+	   -command=>sub {
+	       foreach ($ml->columnGet(0,'end')) {
+		   $ml->columnShow($_);
+	       }
+	   })->pack(-side=>'left',-anchor=>'w');
+
+# Put the MListbox widget on the bottom of the main window.
+$ml->pack (-expand=>1, -fill=>'both', -anchor=>'w');
+
+# Double clicking any of the data rows calls openFileOrDir()
+# (But only directories are handled for now...)
+$ml->bindRows("<Double-Button-1>", \&openFileOrDir);
+
+# Right-clicking the column heading creates the hide/show popup menu.
+$ml->bindColumns("<Button-3>", \&columnPopup);
 
 # Start by showing the current directory.
 directory (".");
@@ -122,20 +129,11 @@ sub directory
     }
 }
 
-# Hide or show a column, depends on the value of $displayed[columnindex].
-sub hideOrShow
+# This callback is called if the user double-clicks one of the rows in
+# the MListbox. If the selected file is a directory, open it.
+#
+sub openFileOrDir
 {
-    my ($index) = @_;
-    if ($displayed[$index]) {
-	$ml->columnShow($index);
-    } else {
-	$ml->columnHide($index);
-    }	    
-}
-
-sub doubleClick
-{
-    print "doubleClick: @_\n";
     my @sel = $ml->curselection;
     if (@sel == 1) {
 	my ($mode, $name) = ($ml->getRow($sel[0]))[0,6];
@@ -143,6 +141,37 @@ sub doubleClick
 	    directory ($name);
 	}
     }
+}
+
+# This callback is called if the user right-clicks the column heading.
+# Create a popupmenu with hide/show options.
+sub columnPopup
+{
+    my ($w, $index) = @_;
+    
+    # Create popup menu.
+    my $menu = $w->Menu(-tearoff=>0);
+
+    # First item is "Hide (this column)".
+    #
+    $menu->add ('command',
+		-label=>"Hide ".$w->columnGet($index)->cget(-text),
+		-command=>sub {
+		    $w->columnHide($index);
+		});
+    $menu->add ('separator');
+
+    # Create a "Show" entry for each column that is not currently visible.
+    #
+    foreach ($w->columnGet(0,'end')) {  # Get all columns from $w.
+	unless ($_->ismapped) {
+	    $menu->add('command',
+		       -label=>"Show ".$_->cget(-text),
+		       -command=>[ $w => 'columnShow', $_, -before=>$index],
+		       );
+	}
+    }
+    $menu->Popup(-popover=>'cursor');
 }
 
 # Converts a numeric file mode to the format provided by the ls command.

@@ -1,0 +1,37 @@
+Revision history for Perl extension Tk::MListbox.
+
+1.06
+----
+The sort() method in 1.05 worked fine on Solaris, but it crashed
+on Linux. The 1.05 version included a hack to make sorting faster. 
+This release is back to the non-optimized version, with the optimizing 
+code commented out. If someone can explain to me why it didn't work on Linux, 
+and perhaps suggest another solution, I'd be grateful. Find the sort() 
+method, and look for a few codelines containing references to the array 
+@cmp_subs.
+
+1.07
+----
+In previous versions, resized columns would expand to at least one or two
+characters width when the mouse cursor moved over the heading. This has now
+been fixed.
+
+Dragging of column headers did not work with Tk 800.018 because of some 
+new cget() beaviour. This release avoids this problem.
+
+When sorting, Busy(-recurse=>1) is now called (if you have a Tk that is
+new enough to support it).
+
+Renamed the test program from filemgr.pl to test.pl.
+
+1.08
+----
+The author discovered h2xs....
+
+Added option -configurecommand.
+Added methods bindRows, bindColumns, bindSeparators.
+Changed test.pl
+
+
+
+

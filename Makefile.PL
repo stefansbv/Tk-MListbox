@@ -4,6 +4,4 @@ use ExtUtils::MakeMaker;
 WriteMakefile(
     'NAME'	=> 'Tk::MListbox',
     'VERSION_FROM' => 'MListbox.pm', # finds $VERSION
-    'dist'      => {'COMPRESS'=>'gzip -9f', 'SUFFIX' => '.gz',
-                    'POSTOP'=>'-$(CHMOD) 644 $(DISTVNAME).tar$(SUFFIX)'},
 );
