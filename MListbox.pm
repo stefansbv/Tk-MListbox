@@ -223,7 +223,7 @@ package Tk::MListbox;
 use vars qw($VERSION);
 
 # Change history:
-$VERSION = '1.05'; 
+$VERSION = '1.06'; 
 
 use Tk;
 use Tk::Pane;
@@ -547,11 +547,12 @@ sub sort
     # Convert all indexes to integers.
     map {$_=$w->columnIndex($_)} @indexes;
     
+    # This works on Solaris, but not on Linux???
     # Store the -comparecmd for each row in a local array. In the sort,
     # the store command is called directly in stead of via the MLColumn
     # subwidget. This saves a lot of callbacks and function calls.
     #
-    my @cmp_subs = map {$_->cget(-comparecmd)} @{$w->{'ml_columns'}};
+   # my @cmp_subs = map {$_->cget(-comparecmd)} @{$w->{'ml_columns'}};
     
     # If sort order is not defined
     unless (defined $descending) {
@@ -571,9 +572,14 @@ sub sort
 	foreach (@indexes) {
 	    my $res = do {
 		if ($descending) {
-		    &{$cmp_subs[$_]} ($b->[$_],$a->[$_]);
+		    # Call via cmp_subs works fine on Solaris, but no
+		    # on Linux. The column->compare method is much slower...
+		    #
+		    # &{$cmp_subs[$_]} ($b->[$_],$a->[$_]);
+		    $w->{'ml_columns'}->[$_]->compare($b->[$_],$a->[$_]);
 		} else {
-		    &{$cmp_subs[$_]} ($a->[$_],$b->[$_]);
+		    # &{$cmp_subs[$_]} ($a->[$_],$b->[$_]);
+		    $w->{'ml_columns'}->[$_]->compare($a->[$_],$b->[$_]);
 		}
 	    };
 	    return $res if $res;
@@ -589,6 +595,7 @@ sub sort
     $w->{'ml_sort_descending'} = $descending;
     $w->Unbusy;
 }
+
 
 #-----------------------------------------------------------------------
 # Internal methods.
