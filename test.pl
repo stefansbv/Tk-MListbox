@@ -39,6 +39,7 @@ $mw->Label(-text=>$intro,-justify=>'left')->pack(-anchor=>'w');
 # it now. 
 my $ml = $mw->Scrolled('MListbox',
 		       -scrollbars => 'oe',
+		       -selectmode => 'extended',
 		       -bd=>2,-relief=>'sunken',
 		       -columns=>[[-text=>'Mode',-textwidth=>10],
 				  [-text=>'NLink', -textwidth=>3,
@@ -78,6 +79,7 @@ $ml->bindColumns("<Button-3>", \&columnPopup);
 
 # Start by showing the current directory.
 directory (".");
+
 
 MainLoop;
 

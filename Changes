@@ -32,6 +32,11 @@ Added option -configurecommand.
 Added methods bindRows, bindColumns, bindSeparators.
 Changed test.pl
 
+1.09
+----
+The selectionSet() method didn't work (actually, it didn't exist...)
+Fixed the -selectmode and the -height configoptions.
+The widget now keeps the same rows selected after a sort.
 
 
 

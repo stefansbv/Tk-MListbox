@@ -45,9 +45,9 @@ AR_STATIC_ARGS = cr
 NAME = Tk::MListbox
 DISTNAME = Tk-MListbox
 NAME_SYM = Tk_MListbox
-VERSION = 1.08
-VERSION_SYM = 1_08
-XS_VERSION = 1.08
+VERSION = 1.09
+VERSION_SYM = 1_09
+XS_VERSION = 1.09
 INST_BIN = blib/bin
 INST_EXE = blib/script
 INST_LIB = blib/lib
@@ -639,7 +639,7 @@ testdb_static :: testdb_dynamic
 # --- MakeMaker ppd section:
 # Creates a PPD (Perl Package Description) for a binary distribution.
 ppd:
-	@$(PERL) -e "print qq{<SOFTPKG NAME=\"Tk-MListbox\" VERSION=\"1,08,0,0\">\n}. qq{\t<TITLE>Tk-MListbox</TITLE>\n}. qq{\t<ABSTRACT></ABSTRACT>\n}. qq{\t<AUTHOR></AUTHOR>\n}. qq{\t<IMPLEMENTATION>\n}. qq{\t\t<OS NAME=\"$(OSNAME)\" />\n}. qq{\t\t<ARCHITECTURE NAME=\"sun4-solaris\" />\n}. qq{\t\t<CODEBASE HREF=\"\" />\n}. qq{\t</IMPLEMENTATION>\n}. qq{</SOFTPKG>\n}" > Tk-MListbox.ppd
+	@$(PERL) -e "print qq{<SOFTPKG NAME=\"Tk-MListbox\" VERSION=\"1,09,0,0\">\n}. qq{\t<TITLE>Tk-MListbox</TITLE>\n}. qq{\t<ABSTRACT></ABSTRACT>\n}. qq{\t<AUTHOR></AUTHOR>\n}. qq{\t<IMPLEMENTATION>\n}. qq{\t\t<OS NAME=\"$(OSNAME)\" />\n}. qq{\t\t<ARCHITECTURE NAME=\"sun4-solaris\" />\n}. qq{\t\t<CODEBASE HREF=\"\" />\n}. qq{\t</IMPLEMENTATION>\n}. qq{</SOFTPKG>\n}" > Tk-MListbox.ppd
 
 # --- MakeMaker pm_to_blib section:
 

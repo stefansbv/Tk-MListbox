@@ -245,13 +245,12 @@ package Tk::MListbox;
 use strict;
 use vars qw($VERSION);
 
-$VERSION = '1.08';
+$VERSION = '1.09';
 
 use Tk;
 use Tk::Pane;
 use strict;
 use Carp;
-use vars qw/$AUTOLOAD/;
 
 require Tk::Frame;
 
@@ -285,6 +284,8 @@ sub Populate {
 		    -xscrollcommand => [$pane],
 		    -yscrollcommand => ['CALLBACK'],
 		    -configurecommand => ['CALLBACK'],
+		    -selectmode => ['METHOD',undef,undef,'browse'],
+		    -height => ['METHOD',undef,undef,'10'],
 		    DEFAULT => ['CHILDREN']);
 }
 
@@ -304,6 +305,23 @@ sub columns
     map {$w->columnInsert('end',@$_)} @$cols;
 }
     
+# This method handles configoptions that should be propagated to 
+# all MLColumn subwidgets. Can't use the "DEFAULT=>['CHILDRE'], since
+# CHILDREN also includes the Pane subwidget.
+
+sub childrenConfigure
+{
+    my ($w,$option,$value) = @_;
+    return $w->{"ml_$option"} unless defined $value;
+    foreach (@{$w->{'ml_columns'}}) {
+	$_->configure("-$option"=>$value);
+    }
+    $w->{"ml_$option"} = $value;
+}
+sub selectmode { shift->childrenConfigure('selectmode',@_)}
+sub height { shift->childrenConfigure('height',@_)}
+
+
 #---------------------------------------------------------------------
 # Exported methods.
 #
@@ -613,8 +631,19 @@ sub sort
 	    $descending = 0;
 	}
     }
+
+    # To retain the selection after the sort we have to save information
+    # about the current selection before the sort. Adds a dummy column
+    # to the two dimensional data array, this last column will be true
+    # for all rows that are currently selected.
+    my $dummy_column = scalar(@{$w->{'ml_columns'}});
+
+    my @data = $w->get(0,'end');
+    foreach ($w->curselection) {
+	$data[$_]->[$dummy_column] = 1;  # Selected...
+    }
     
-    my @sorted = sort {
+    @data = sort {
 	local $^W = 0;
 	foreach (@indexes) {
 	    my $res = do {
@@ -632,14 +661,24 @@ sub sort
 	    return $res if $res;
 	}
 	return 0;
-    } $w->get(0,'end');
+    } @data;
+    
+
     
     # Replace data with the new, sorted list.
     $w->delete(0,'end');
-    $w->insert(0,@sorted);
+    $w->insert(0,@data);
+
+    my @new_selection = ();
+    foreach (0..$#data) {
+	if ($data[$_]->[$dummy_column]) {
+	    $w->selectionSet($_,$_);
+	}
+    }
 
     $w->{'ml_sortcol'} = $indexes[0];
     $w->{'ml_sort_descending'} = $descending;
+    
     $w->Unbusy; #(-recurse=>1);
 }
 
@@ -865,6 +904,7 @@ sub index { shift->firstVisible->index(@_)}
 sub nearest { shift->firstVisible->nearest(@_)}
 sub see { shift->firstVisible->see(@_)}
 sub selectionAnchor { shift->firstVisible->selectionAnchor(@_)}
+sub selectionSet { shift->firstVisible->selectionSet(@_)}
 sub selectionClear { shift->firstVisible->selectionClear(@_)}
 sub selectionIncludes { shift->firstVisible->selectionIncludes(@_)}
 sub size { shift->firstVisible->size(@_)}
@@ -917,7 +957,7 @@ L<Tk::Listbox>
 =head1 STANDARD OPTIONS
 
 B<-background> B<-foreground> B<-relief> B<-takefocus>
-B<-borderwidth>	B<-height> B<-selectbackground>	B<-cursor>
+B<-borderwidth>	B<-heigh> B<-selectbackground>	B<-cursor>
 B<-highlightbackground> B<-selectborderwidth> B<-xscrollcommand>
 B<-exportselection> B<-highlightcolor> B<-selectforeground>
 B<-yscrollcommand> B<-font> B<-highlightthickness> B<-setgrid>
