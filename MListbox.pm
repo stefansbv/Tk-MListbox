@@ -1,13 +1,13 @@
-## MListBox Version 1.10 (18 Dec 2001)
+## MListbox Version 1.11 (26 Dec 2001)
 ##
-## Original Author: Hans J. Helgesen, Dec 1999
-## Maintainer: Rob Seegel
+## Original Author: Hans J. Helgesen, Dec 1999  
+## Maintainer: Rob Seegel (versions 1.10+)
 ##
 ## This version is a maintenance release of Hans' MListbox widget.
 ## I have tried to avoid adding too many new features and just ensure 
 ## that the existing ones work properly.
 ## 
-## Please send feedback to RobSeegel@aol.com or rcseege@yahoo.com
+## Please post feedback to comp.lang.perl.tk or email to RobSeegel@aol.com
 ##
 ## This module contains four classes. Of the four MListbox is
 ## is the only one intended for standalone use, the other three:
@@ -15,9 +15,6 @@
 ## not intended to be used in any other way other than as 
 ## components of MListbox
 ##
-## The three internal classes are "preloaded" when this file is first
-## read, so that they will be available for use within MListbox
-
 ##############################################################################
 ## CListbox is similar to an ordinary listbox, but with the following 
 ## differences:
@@ -244,7 +241,7 @@ package Tk::MListbox;
 use strict;
 use Carp;
 use vars qw($VERSION);
-$VERSION = '1.10';
+$VERSION = '1.11';
 
 use Tk;
 
@@ -465,11 +462,12 @@ sub width {
 ## defined callback ($cb) is called from within it
 
 sub _bindCallback {
-    my ($w, $cb, $sw, $ci, $ri) = @_;
+    my ($w, $cb, $sw, $ci, $yCoord) = @_;
 
     my $iHR = { '-subwidget' => $sw, '-column' => $ci };
-    $iHR->{'-row'} = $ri if defined($ri); 
-
+    if (defined($yCoord)) {
+        $iHR->{'-row'} = $w->_getEntryFromY($sw, $yCoord);
+    }
     if (ref $cb eq 'ARRAY') {
 	my ($code,@args) = @$cb;
 	return $w->$code($iHR, @args);
@@ -510,7 +508,7 @@ sub _bindSubwidgets {
         if ($sw->class ne "CListbox") {
 	    $sw->Tk::bind($sequence, [$w => @args, $sw, $col++]);
 	} else {
-	    $sw->Tk::bind($sequence, [$w => @args, $sw, $col++, Ev('nearest',Ev('y'))]);
+	    $sw->Tk::bind($sequence, [$w => @args, $sw, $col++, Ev('y')]);
         }
     }
     $w->{'_bindings'}->{$subwidget}->{$sequence} = $callback;
@@ -557,7 +555,6 @@ sub _deselectAll {
         $w->selectionClear(0, 'end');
     }
 }
-
 
 ## implements sorting and dragging & drop of a column
 sub _dragOrSort {
@@ -671,6 +668,20 @@ sub _firstVisible {
     return $w->{'_columns'}->[0];
 }
 
+sub _getEntryFromY {
+    my ($cw, $sw, $yCoord) = @_;
+    my $nearest = $sw->nearest($yCoord);
+ 
+    return $nearest
+        if ($nearest < ($sw->size() - 1));
+    
+    my ($x, $y, $w, $h) = $sw->bbox($nearest);
+    my $lastY = $y + $h;
+    return -1 
+        if ($yCoord > $lastY);
+    return $nearest;
+}
+
 ## Used to distribute method calls which would otherwise be called for
 ## for one CListbox (Within a column), Each CListbox is a modified 
 ## Listbox whose methods end up passing the code and arguments that need
@@ -744,43 +755,9 @@ sub _yscrollCallback  {
 ## Activate a row
 sub activate { shift->_firstVisible->activate(@_)}
 
-## The following methods take care of external bindings. It makes little sense
-## to call $mlistbox->bind(...) without specifying a subwidget (header, listbox,
-## separator).
-##
-## These methods store the binding information, and if you create a new
-## column by calling $mlistbox->columnInsert, all bindings created by
-## these methods are automatically copied to the new column.
-##
-## The callback is called with the MListbox widget as the first argument, and
-## a hashreference as the second. The hash reference contains information about
-## about where the event occured, including
-##     -subwidget => $sw    The actual subwidget being bound to
-##     -column => $c        The column number containing the subwidget
-##     -row => $r           The row number in the subwidget (bindRows() only)
-##
-## Only the following callback formats are supported:
-##     \&subname
-##     sub { code }
-##     [ \&subname, arguments...]
-##     [ sub { code }, arguments...]##
-
-## RCS NOTE: One of the methods is an overriden bind() which is an alias to 
-## bindRows(). Personally, I don't think this was a good idea, though I can
-## understand why it was done. I'd prefer not to leave bind alone and let it
-## just bind to the MListbox widget itself, since the widget can accept
-## take focus.
-
-## bind()           alias for bindRows()
-## bindColumns()    adds the binding to all column headers in the widget.
-## bindRows()       adds the specified binding to all listboxes in the widget.
-## bindSeparators() adds the binding to all separators in the widget.
-
-sub bind           {  shift->bindRows(@_) }
 sub bindColumns    {  shift->_bindSubwidgets('heading',@_) }
 sub bindRows       {  shift->_bindSubwidgets('listbox',@_) }
 sub bindSeparators {  shift->_bindSubwidgets('separator',@_) }
-
 
 sub columnConfigure {
     my ($w, $index, %args) = @_;
@@ -941,17 +918,14 @@ sub columnShow {
     my ($w, $index, %args) = @_;
     
     my $c = $w->columnGet($index);
-    
     my @packopts = (-anchor=>'w',-side=>'left',-fill=>'both');
     if (defined($args{'-before'})) {
 	push (@packopts, '-before'=>$w->columnGet($args{'-before'}));
     } elsif (defined($args{'-after'})) {
 	push (@packopts, '-after'=>$w->columnGet($args{'-after'}));
     }
-    
     $c->pack(@packopts);
 }
-
 
 sub curselection { shift->_firstVisible->curselection(@_)}
 
@@ -1045,9 +1019,8 @@ sub sort {
     # the -recurse=>1 option.
     $w->Busy;   # This works always (but not very good...)
     Tk::catch {$w->Busy(-recurse=>1)};# This works on newer Tk versions,
-                                    # harmless on old versions.
-      
-      
+                                      # harmless on old versions.
+     
     @indexes = (0..$#{$w->{'_columns'}}) unless @indexes;
 
     # Convert all indexes to integers.
@@ -1103,9 +1076,7 @@ sub sort {
 	}
 	return 0;
     } @data;
-    
-
-    
+        
     # Replace data with the new, sorted list.
     $w->delete(0,'end');
     $w->insert(0,@data);
@@ -1122,10 +1093,6 @@ sub sort {
     
     $w->Unbusy; #(-recurse=>1);
 }
-
-
-
-
 
 # Implements horizontal scanning. 
 sub xscan {

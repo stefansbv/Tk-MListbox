@@ -46,6 +46,8 @@ The widget now keeps the same rows selected after a sort.
 - fixed color option problems (-background/-foreground/-selectbackground, etc)
 - Adding some keyboard bindings 
 - deprecated bind() -- it was aliasing bindRows()
+- In previous versions, the canvas widget was used for each separater - I replaced 
+  this with  Frame widgets.
 - made changes to bindColumns/bindRows/bindSeparators 
   the second argument is no longer a column index. It is
   now a hash reference containing {-subwidget => $sw, -columns => index}.
@@ -61,6 +63,18 @@ The widget now keeps the same rows selected after a sort.
   -columns option, or by using columnConfigure or columnInsert. However,
   once widget is created. If the higher level MListbox options are 
   reconfigured they will override all columns. (This seemed logical).
+
+1.11
+
+- when bindRows is used it returns a hash reference containing the subwidget
+  being bound, and the column and row indices underneath the mouse pointer.
+  The row index used to be the nearest entry to the pointer. This was fine 
+  except for cases where there was space for more rows within the MListbox.
+  The index returned would still be for the last element, even though it was not
+  directly underneath the pointer. In sitations such as these, it now returns -1.
+
+ -Corrected some typos in docs, updated to reflect lasted change to bindRows(),
+  and added more info to existing docs.
 
 Rob
 

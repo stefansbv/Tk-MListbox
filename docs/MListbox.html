@@ -3,7 +3,7 @@
 <head>
   <title>Tk::MListbox - Multi-column Listbox</title>
   <link rel='stylesheet' type='text/css' href='ptkdocs.css'>
-  <meta name='Version' content='0.01'>
+  <meta name='Version' content='0.02'>
  </head>
  <body background="bg.gif">
 
@@ -19,7 +19,7 @@
   </td>
   <td valign="top" width ="30%" height='100%' rowspan=2>
     <table width="100%" >
-      <tr valign=top><th align=right>Version:</th><td>1.10</td></tr>
+      <tr valign=top><th align=right>Version:</th><td>1.11</td></tr>
       <tr valign=top><th align=right>DSLIP:</th><td>bdpOp</td></tr>
       <tr valign=top><th align=right>Author:</th><td nowrap>Hans J. Helgesen</td></tr>
       <tr valign=top><th align=right>Maintainer:</th><td nowrap><a href="mailto:robseegel@aol.com">Rob Seegel</a></td></tr>
@@ -78,13 +78,13 @@ my $ml = $parent-&gt;<b>MListbox</b>(?<a href='#options'>options</a>, ...?)<br><
 </p>
 
 <p class='pMargin'>
-   MListbox chandles tasks that can also be accomplished using the<b>HList</b>, 
+   MListbox handles tasks that can also be accomplished using the <b>HList</b>, 
    <b>TixGrid</b>, or <b>Table</b> widgets from the main Tk Distribution. 
-   <b>Columns</b> and <b>TableMatrix</b>, which are available on CPAN are
-   also common  alternatives. 
+   <b>Columns</b> and <b>TableMatrix</b> (available on CPAN) are
+   other common alternatives. 
 </p>   
 <p class='pMargin'>
- MListbox distinguishes itself from the others by offering several commonly used 
+ MListbox distinguishes itself from the others by providing commonly used 
  features associated with tabular display widgets. Among them is the ability to 
  change the order of columns using drag and drop, and the ability to hide or show
  individual columns. These two features are not currently supported by any of the 
@@ -668,7 +668,6 @@ other methods.
    for the <a href="MListbox/MLColumn.html#header">header</a> subwidget
    in each of the <a href="MListbox/MLColumn.html">columns</a>.
 </p>
-
 <p class='pMargin'>
    Unlike the normal bind() method, bindColumns will pass two parameters
    to whatever <i>callback</i> is defined instead of one. These include a 
@@ -687,8 +686,9 @@ other methods.
   </dd>
 </dl>
 </p>
+<p>See also</p>
 <p class='pMargin'>
-   Refer to section on <a href="MListbox/tutorial.html#binding">binding events to MListbox</a>
+    <a href="MListbox/tutorial.html#binding">binding events to MListbox</a>
    in the tutorial.
 </p>
 <hr width='75%' align=left>
@@ -701,7 +701,6 @@ other methods.
    for the <a href="MListbox/MLColumn.html#listbox">listbox</a> subwidget
    in each of the <a href="MListbox/MLColumn.html">columns</a>.
 </p>
-
 <p class='pMargin'>
    Unlike the normal bind() method, bindColumns will pass two parameters
    to whatever <i>callback</i> is defined instead of one. These include a 
@@ -720,7 +719,9 @@ other methods.
   </dd>
   <dt><b>-row</b> =&gt; <i>index</i></dt>
   <dd style='list-item-indent: .5in'>
-    The index of the row nearest the mouse pointer
+    The index of the row directly underneath the mouse pointer. The value
+    will be <b>-1</b> in cases where there is no row directly underneath
+    the mouse pointer.
   </dd>
 </dl>
 </p>
@@ -731,8 +732,9 @@ other methods.
     print "You pressed row: " . $infoHR->{-row} .
           " in column: " . $infoHR->{-column} . "\n";
 });</pre>
+<p>See also</p>
 <p class='pMargin'>
-   Refer to section on <a href="MListbox/tutorial.html#binding">binding events to MListbox</a>
+   <a href="MListbox/tutorial.html#binding">binding events to MListbox</a>
    in the tutorial.
 </p>
 <hr width='75%' align=left>
@@ -764,8 +766,9 @@ other methods.
   </dd>
 </dl>
 </p>
+<p>See also</p>
 <p class='pMargin'>
-   Refer to section on <a href="MListbox/tutorial.html#binding">binding events to MListbox</a>
+   <a href="MListbox/tutorial.html#binding">binding events to MListbox</a>
    in the tutorial.
 </p>
 <hr width='75%' align=left>
@@ -833,12 +836,8 @@ other methods.
 </p>
 <p>See also</p>
 <p class=pMargin>
-    The section on <a href='#colindices'>Column indices</a>.
-<ul>
-    <li><b>end</b> - which represents the last column</li>
-    <li>A <a href="MListbox/MLColumn.html">MLColumn</a> widget</li>
-    <li>An integer (in which case it returns the same index value)</li>
-</ul>
+    <a href='#colindices'>Column indices</a>.
+</p>
 <hr width='75%' align=left>
 
 <!-- columnInsert -->
@@ -1154,7 +1153,7 @@ other methods.
 <table width='95%' border=2 cellpadding=3>
 <tr><th width="20%">Sequence</th><th>Description</th></tr>
 <tr>
-  <td>&lt;Down&gt;</td>
+  <td nowrap>&lt;Down&gt;</td>
   <td>
 Moves the location cursor (active row) down by one elment
 and changes the selection while in <b>browse</b> or <b>extended</b>
@@ -1162,71 +1161,64 @@ selectmode.
   </td>
 </tr>
 <tr>
-  <td>&lt;Up&gt;</td>
+  <td nowrap>&lt;Up&gt;</td>
   <td>
 Moves the location cursor up by one element and changes the selection 
 while in <b>browse</b> or <b>extended</b> selectmode.
   </td>
 </tr>
 <tr>
-  <td>&lt;Shift-Down&gt;</td>
+  <td nowrap>&lt;Shift-Down&gt;</td>
   <td>
 Moves the location cursor down by one, and extends the selection
 while in <b>extended</b> selectmode.
   </td>
 </tr>
 <tr>
-  <td>&lt;Shift-Up&gt;</td>
+  <td nowrap>&lt;Shift-Up&gt;</td>
   <td>
 Moves the location cursor up by one, and extends the selection
 while in <b>extended</b> selectmode.
   </td>
 </tr>
 <tr>
-  <td>&lt;Shift-Control-Home&gt;</td>
+  <td nowrap>&lt;Shift-Control-Home&gt;</td>
   <td>
 Extends the selection to the first row.
   </td>
 </tr>
 <tr>
-  <td>&lt;Shift-COntrol-End&gt;</td>
+  <td nowrap>&lt;Shift-Control-End&gt;</td>
   <td>
 Extends the selection to the last row.
   </td>
 </tr>
 <tr>
-  <td>&lt;Control-Home&gt;</td>
+  <td nowrap>&lt;Control-Home&gt;</td>
   <td>
 Moves the location cursor to the first row, selects it, and clears
 all other selected rows.
   </td>
 </tr>
 <tr>
-  <td>&lt;Control-End&gt;</td>
+  <td nowrap>&lt;Control-End&gt;</td>
   <td>
 Moves the location cursor to the last row, selects it, and clears
 all other selected rows.
   </td>
-  </td>
 </tr>
 <tr>
-  <td>&lt;Control-Slash&gt;</td>
+  <td nowrap>&lt;Control-Slash&gt;</td>
   <td>Selects all rows.</td></tr>
 <tr>
-  <td>&lt;Control-Backslash&gt;</td>
+  <td nowrap>&lt;Control-Backslash&gt;</td>
   <td>Deselects all rows.</td></tr>
 </table>
 <br>
 <hr>
 
-
-
-
-</table>
-
-
 <Address>
-This document was updated by Rob Seegel on 20 Dec 2001
+This document was updated by Rob Seegel on 26 Dec 2001
 </Address>
 
 </body>
